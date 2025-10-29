@@ -1,0 +1,120 @@
+version: '3.8'
+
+# Network definition
+networks:
+  ecommerce-network:
+    driver: bridge
+
+# Services definition
+services:
+  
+  # ==========================================
+  # Service Registry (Eureka Server)
+  # ==========================================
+  service-registry:
+    build:
+      context: ../ecommerce-service-registry
+      dockerfile: Dockerfile
+    image: ecommerce-service-registry:latest
+    container_name: service-registry
+    ports:
+      - "8761:8761"
+    networks:
+      - ecommerce-network
+    environment:
+      - JAVA_OPTS=-Xmx512m -Xms256m
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8761/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # ==========================================
+  # Config Server
+  # ==========================================
+  config-server:
+    build:
+      context: ../ecommerce-config-server
+      dockerfile: Dockerfile
+    image: ecommerce-config-server:latest
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    networks:
+      - ecommerce-network
+    environment:
+      - JAVA_OPTS=-Xmx512m -Xms256m
+      - SPRING_CLOUD_CONFIG_SERVER_GIT_URI=https://github.com/DanLearnings/ecommerce-config-repo
+      - SPRING_CLOUD_CONFIG_SERVER_GIT_DEFAULT_LABEL=main
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+    depends_on:
+      service-registry:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8888/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # ==========================================
+  # API Gateway
+  # ==========================================
+  api-gateway:
+    build:
+      context: ../ecommerce-api-gateway
+      dockerfile: Dockerfile
+    image: ecommerce-api-gateway:latest
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    networks:
+      - ecommerce-network
+    environment:
+      - JAVA_OPTS=-Xmx512m -Xms256m
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+    depends_on:
+      service-registry:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # ==========================================
+  # Inventory Service
+  # ==========================================
+  inventory-service:
+    build:
+      context: ../ecommerce-inventory-service
+      dockerfile: Dockerfile
+    image: ecommerce-inventory-service:latest
+    container_name: inventory-service
+    ports:
+      - "8081:8081"
+    networks:
+      - ecommerce-network
+    environment:
+      - JAVA_OPTS=-Xmx512m -Xms256m
+      - SPRING_CONFIG_IMPORT=configserver:http://config-server:8888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+    depends_on:
+      service-registry:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
