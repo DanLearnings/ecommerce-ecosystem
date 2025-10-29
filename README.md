@@ -47,7 +47,7 @@ The ecosystem is built upon a **microservices architecture**, where each service
 ## 🛠️ Tech Stack
 
 -   **Backend Framework:** Java 21, Spring Boot 3.5.7
--   **Cloud Framework:** Spring Cloud 2025.0.0 / 2023.0.3
+-   **Cloud Framework:** Spring Cloud 2025.0.0 
 -   **Service Discovery:** Netflix Eureka
 -   **API Gateway:** Spring Cloud Gateway (WebFlux)
 -   **Configuration:** Spring Cloud Config (Git-backed)
