@@ -10,27 +10,6 @@ This project is a hands-on exploration of building a production-grade e-commerce
 
 The ecosystem is built upon a **microservices architecture**, where each service is independently deployable, scalable, and maintainable. Services communicate both **synchronously** (REST/HTTP) and **asynchronously** (RabbitMQ messaging) depending on the use case.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                   Service Registry (Eureka)                  │
-│                        Port 8761                             │
-└──────────────────────┬──────────────────────────────────────┘
-                       │
-          ┌────────────┼────────────┬─────────────┐
-          │            │            │             │
-┌─────────▼──────┐ ┌──▼──────┐ ┌──▼────────┐ ┌──▼───────────┐
-│ Config Server  │ │   API   │ │ Inventory │ │Notification  │
-│   Port 8888    │ │ Gateway │ │  Service  │ │   Service    │
-│                │ │Port 8080│ │ Port 8081 │ │  Port 8083   │
-└────────┬───────┘ └─────────┘ └───────────┘ └──────┬───────┘
-         │                                            │
-         ▼                                            │
-┌────────────────┐          ┌──────────────────┐     │
-│  Config Repo   │          │    RabbitMQ      │◄────┘
-│   (GitHub)     │          │  Ports 5672      │
-│                │          │       15672      │
-└────────────────┘          └──────────────────┘
-```
 
 ### Main Components:
 
