@@ -2,47 +2,48 @@
 
 Welcome to the central hub for the E-commerce Microservices Ecosystem! This repository contains the high-level architectural documentation and serves as the main entrypoint for understanding the entire distributed system.
 
-This project is a hands-on exploration of building a production-grade e-commerce platform using microservices architecture, Spring Cloud, and modern DevOps practices. This document outlines the architecture, the technology stack, and the development journey through each phase, highlighting key lessons learned along the way.
+This project is a hands-on exploration of building a production-grade e-commerce platform using microservices architecture, Spring Cloud, event-driven patterns, and modern DevOps practices.
 
-You can follow the project's progress and tasks on the **GitHub Project Board** (coming soon).
+---
 
 ## 🏛️ Architecture Overview
 
-The ecosystem is built upon a **microservices architecture**, where each service is independently deployable, scalable, and maintainable. This architectural style was chosen to provide flexibility, fault isolation, and the ability to scale individual components based on demand.
+The ecosystem is built upon a **microservices architecture**, where each service is independently deployable, scalable, and maintainable. Services communicate both **synchronously** (REST/HTTP) and **asynchronously** (RabbitMQ messaging) depending on the use case.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      Service Registry                        │
-│                    (Eureka Server - 8761)                    │
-└─────────────────────────────────────────────────────────────┘
-                              ▲
-                              │
-        ┌─────────────────────┼─────────────────────┐
-        │                     │                     │
-┌───────▼────────┐   ┌────────▼────────┐   ┌───────▼────────┐
-│ Config Server  │   │  API Gateway    │   │   Inventory    │
-│  (Port 8888)   │   │  (Port 8080)    │   │   Service      │
-│                │   │                 │   │  (Port 8081)   │
-└────────────────┘   └─────────────────┘   └────────────────┘
-        │                     │
-        │                     │
-        ▼                     ▼
-┌─────────────────┐   ┌─────────────────┐
-│  Config Repo    │   │  Order Service  │
-│   (GitHub)      │   │  (Port 8082)    │
-│                 │   │  [PLANNED]      │
-└─────────────────┘   └─────────────────┘
+│                   Service Registry (Eureka)                  │
+│                        Port 8761                             │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+          ┌────────────┼────────────┬─────────────┐
+          │            │            │             │
+┌─────────▼──────┐ ┌──▼──────┐ ┌──▼────────┐ ┌──▼───────────┐
+│ Config Server  │ │   API   │ │ Inventory │ │Notification  │
+│   Port 8888    │ │ Gateway │ │  Service  │ │   Service    │
+│                │ │Port 8080│ │ Port 8081 │ │  Port 8083   │
+└────────┬───────┘ └─────────┘ └───────────┘ └──────┬───────┘
+         │                                            │
+         ▼                                            │
+┌────────────────┐          ┌──────────────────┐     │
+│  Config Repo   │          │    RabbitMQ      │◄────┘
+│   (GitHub)     │          │  Ports 5672      │
+│                │          │       15672      │
+└────────────────┘          └──────────────────┘
 ```
 
 ### Main Components:
 
--   **🏛️ [ecommerce-ecosystem](https://github.com/DanLearnings/ecommerce-ecosystem):** (You are here) The main entrypoint and architectural documentation hub.
--   **🔍 [ecommerce-service-registry](https://github.com/DanLearnings/ecommerce-service-registry):** Eureka Server for service discovery and registration.
--   **⚙️ [ecommerce-config-server](https://github.com/DanLearnings/ecommerce-config-server):** Centralized configuration management using Spring Cloud Config.
--   **🌐 [ecommerce-api-gateway](https://github.com/DanLearnings/ecommerce-api-gateway):** API Gateway built with Spring Cloud Gateway WebFlux for routing and load balancing.
--   **📦 [ecommerce-inventory-service](https://github.com/DanLearnings/ecommerce-inventory-service):** Business microservice responsible for product catalog and inventory management.
--   **🛒 [ecommerce-order-service](https://github.com/DanLearnings/ecommerce-order-service):** Business microservice for order processing (planned).
--   **📝 [ecommerce-config-repo](https://github.com/DanLearnings/ecommerce-config-repo):** Git repository storing externalized configurations for all services.
+-   **🏛️ [ecommerce-ecosystem](https://github.com/DanLearnings/ecommerce-ecosystem):** (You are here) The main entrypoint and architectural documentation hub
+-   **🔍 [ecommerce-service-registry](https://github.com/DanLearnings/ecommerce-service-registry):** Eureka Server for service discovery and registration
+-   **⚙️ [ecommerce-config-server](https://github.com/DanLearnings/ecommerce-config-server):** Centralized configuration management using Spring Cloud Config
+-   **🌐 [ecommerce-api-gateway](https://github.com/DanLearnings/ecommerce-api-gateway):** API Gateway built with Spring Cloud Gateway WebFlux for routing and load balancing
+-   **📦 [ecommerce-inventory-service](https://github.com/DanLearnings/ecommerce-inventory-service):** Business microservice for product catalog and inventory management
+-   **📧 [ecommerce-notification-service](https://github.com/DanLearnings/ecommerce-notification-service):** Notification service for sending emails via SMTP and consuming RabbitMQ events
+-   **🐰 RabbitMQ:** Message broker for asynchronous event-driven communication
+-   **📝 [ecommerce-config-repo](https://github.com/DanLearnings/ecommerce-config-repo):** Git repository storing externalized configurations for all services
+
+---
 
 ## 🛠️ Tech Stack
 
@@ -51,11 +52,14 @@ The ecosystem is built upon a **microservices architecture**, where each service
 -   **Service Discovery:** Netflix Eureka
 -   **API Gateway:** Spring Cloud Gateway (WebFlux)
 -   **Configuration:** Spring Cloud Config (Git-backed)
--   **Database:** H2 (in-memory, development) → PostgreSQL (production planned)
+-   **Messaging:** RabbitMQ (AMQP protocol)
+-   **Email:** JavaMail (SMTP - Gmail)
+-   **Database:** H2 (in-memory, development) → PostgreSQL (planned)
 -   **Build Tool:** Maven
--   **Containerization:** Docker
--   **Orchestration:** Docker Compose (local), Kubernetes (planned)
+-   **Containerization:** Docker (multi-stage builds)
+-   **Orchestration:** Docker Compose
 -   **CI/CD:** GitHub Actions (planned)
+-   **Monitoring:** Spring Boot Actuator
 
 ---
 
@@ -74,60 +78,60 @@ Before building business logic, I established the foundational infrastructure se
 
 With infrastructure in place, I built the API Gateway to serve as the single entry point for all client requests.
 
--   **What I did:** Implemented Spring Cloud Gateway using the WebFlux (reactive) variant. Configured automatic service discovery via Eureka, allowing the gateway to dynamically route requests to registered services without manual configuration. Exposed health and monitoring endpoints via Spring Boot Actuator.
--   **💡 Key Learning:** The most significant lesson was understanding the **difference between Gateway MVC and Gateway WebFlux**. Initially, I attempted to use the MVC variant (`spring-cloud-starter-gateway-server-webmvc`), but encountered serious limitations with service discovery and routing. After extensive debugging and research, I discovered that **WebFlux is the recommended and fully-functional variant** for Spring Cloud Gateway. The configuration hierarchy also matters: `spring.cloud.gateway.server.webflux.discovery.locator` is the correct path for WebFlux, not just `spring.cloud.gateway.discovery.locator`. This experience reinforced the value of consulting tutorials and real-world examples alongside official documentation.
+-   **What I did:** Implemented Spring Cloud Gateway using the WebFlux (reactive) variant. Configured automatic service discovery via Eureka, allowing the gateway to dynamically route requests to registered services without manual configuration.
+-   **💡 Key Learning:** The most significant lesson was understanding the **difference between Gateway MVC and Gateway WebFlux**. Initially, I attempted to use the MVC variant, but encountered serious limitations with service discovery and routing. After debugging, I discovered that **WebFlux is the recommended and fully-functional variant** for Spring Cloud Gateway. The configuration hierarchy also matters: `spring.cloud.gateway.server.webflux.discovery.locator` is the correct path for WebFlux.
 
 ### Phase 3: Business Services (Inventory Service)
 
 With the infrastructure and gateway operational, I developed the first business microservice.
 
--   **What I did:** Built a complete REST API for product inventory management following the **Controller → Service → Repository** architectural pattern. Implemented full CRUD operations, integrated with Spring Data JPA and H2 database, and configured the service to register with Eureka and pull configurations from the Config Server. Added business logic for stock management (check stock, decrease stock).
--   **💡 Key Learning:** The biggest challenge was ensuring the service correctly **integrated with the Config Server**. Initially, the service ignored the externalized configuration and used default values. The solution involved using `spring.config.import: "configserver:http://localhost:8888"` in the `application.yml` file. Removing `optional:` from this configuration ensures the service **fails fast** if it cannot connect to the Config Server, which is better than running with incorrect settings. I also learned the importance of proper **service startup order**: Service Registry → Config Server → API Gateway → Business Services.
+-   **What I did:** Built a complete REST API for product inventory management following the **Controller → Service → Repository** architectural pattern. Implemented full CRUD operations, integrated with Spring Data JPA and H2 database, and configured the service to register with Eureka and pull configurations from the Config Server.
+-   **💡 Key Learning:** The biggest challenge was ensuring the service correctly **integrated with the Config Server**. The solution involved using `spring.config.import: "configserver:http://config-server:8888"` in the application.yml file. Removing `optional:` from this configuration ensures the service **fails fast** if it cannot connect to the Config Server, which is better than running with incorrect settings.
 
-### Phase 4: End-to-End Testing & Validation
-
-This phase focused on validating that all components work together as a cohesive system.
-
--   **What I did:** Created a comprehensive Postman collection to test the entire request flow: from the API Gateway to the Inventory Service via Eureka-based service discovery. Validated that products can be created, listed, updated, and deleted through the gateway. Confirmed that the gateway correctly routes requests based on service names registered in Eureka.
--   **💡 Key Learning:** Seeing the entire ecosystem work together was incredibly rewarding. The most important validation was confirming that **requests through the gateway (port 8080) and direct requests to the service (port 8081) produced identical results**. This proved that the gateway, Eureka, and the business service were all correctly integrated. Testing also revealed the value of having both direct and gateway-routed endpoints available during development for debugging purposes.
-
-### Phase 5: Containerization (Docker)
+### Phase 4: Containerization (Docker)
 
 After validating the entire ecosystem running locally with Maven, I containerized each service to enable consistent deployment across different environments.
 
--   **What I did:** Created **multi-stage Dockerfiles** for all four services (Service Registry, Config Server, API Gateway, and Inventory Service). Implemented best practices including non-root users for security, health checks, optimized layer caching, and Alpine-based images for smaller footprint. Configured Docker networking to enable service-to-service communication using service names. Tested each service individually as a container and validated the entire stack running in Docker.
--   **💡 Key Learning:** The transition from local Maven execution to containerized deployment revealed several important considerations. **Environment variables** became crucial for configuration, replacing hardcoded `localhost` references with container service names (e.g., `config-server` instead of `localhost:8888`). The **startup order** became even more critical in containers, requiring proper use of `depends_on` and health checks. I learned that **multi-stage builds** significantly reduce image size by separating the build environment (with Maven) from the runtime environment (with only JRE). The Config Server required special attention as it needed Git installed in the container to clone the configuration repository. Most importantly, I discovered that **Docker networking** automatically provides DNS resolution between containers, making service discovery seamless when combined with Eureka.
+-   **What I did:** Created **multi-stage Dockerfiles** for all services. Implemented best practices including non-root users for security, health checks, optimized layer caching, and Alpine-based images for smaller footprint. Configured Docker networking to enable service-to-service communication using service names.
+-   **💡 Key Learning:** The transition from local Maven execution to containerized deployment revealed several important considerations. **Environment variables** became crucial for configuration, replacing hardcoded `localhost` references with container service names. The **startup order** became even more critical in containers, requiring proper use of `depends_on` and health checks. **Multi-stage builds** significantly reduce image size by separating the build environment (with Maven) from the runtime environment (with only JRE).
+
+### Phase 5: Event-Driven Architecture (RabbitMQ & Notification Service)
+
+To enable asynchronous communication between services, I integrated RabbitMQ as a message broker and built the Notification Service.
+
+-   **What I did:** Set up RabbitMQ with management UI, configured exchanges, queues, and bindings. Created the Notification Service to send emails via Gmail SMTP and consume events from RabbitMQ. Implemented event publishers and listeners using Spring AMQP. Designed the system to support multiple notification types (EMAIL, SMS, PUSH) and maintain a history of all notifications sent.
+-   **💡 Key Learning:** This phase revealed the power of **event-driven architecture** for decoupling services. Instead of the Inventory Service directly calling the Notification Service (tight coupling), services now publish events to RabbitMQ, and interested services consume them. This approach provides **resilience** (messages persist even if the consumer is down), **scalability** (multiple consumers can process messages in parallel), and **flexibility** (new consumers can be added without modifying publishers). I also learned the importance of **message converters** (Jackson JSON) for seamless object serialization between services.
 
 ---
 
 ## 🏁 Current Status & Next Steps
 
-The project has successfully reached a significant milestone: a fully functional microservices infrastructure with one operational business service, all integrated, tested, and containerized.
+The project has successfully reached a significant milestone: a fully functional microservices infrastructure with event-driven communication, all integrated, tested, and containerized.
 
 **Current Status:**
 - ✅ Service Registry (Eureka) - Operational
 - ✅ Config Server - Operational
 - ✅ API Gateway (WebFlux) - Operational
 - ✅ Inventory Service - Fully functional with CRUD operations
-- ✅ End-to-end testing via Postman - Validated
-- ✅ Docker containerization - All services containerized with multi-stage builds
-- ✅ Docker networking - Services communicate via Docker network
+- ✅ Notification Service - Email sending + RabbitMQ integration
+- ✅ RabbitMQ Message Broker - Exchanges, queues, and consumers configured
+- ✅ Docker Compose Orchestration - Single command deployment
 
 **Immediate Next Steps:**
 
-1.  **Docker Compose:** Create a single `docker-compose.yml` file to orchestrate all services with one command, including proper dependency management and health checks.
-2.  **Documentation Updates:** Complete individual README files for each microservice with Docker-specific instructions.
-3.  **Order Service:** Implement the second business microservice with inter-service communication using Feign Client.
-4.  **Resilience:** Add Circuit Breaker pattern using Resilience4j to handle service failures gracefully.
+1.  **Order Service:** Implement order management with stock reservation logic
+2.  **Payment Service:** Simulate payment processing with event publishing
+3.  **Inter-Service Communication:** Implement Feign Clients for synchronous calls
+4.  **Advanced Messaging:** Add more event types (OrderCreated, PaymentApproved, etc.)
 
 **Future Enhancements:**
 
-1.  **Persistent Database:** Replace H2 with PostgreSQL for production-grade data persistence.
-2.  **Security:** Implement JWT-based authentication and authorization at the API Gateway level.
-3.  **Observability:** Integrate distributed tracing (Zipkin/Micrometer) and centralized logging (ELK Stack).
-4.  **CI/CD Pipeline:** Automate build, test, Docker image creation, and deployment with GitHub Actions.
-5.  **Kubernetes Deployment:** Create Kubernetes manifests and deploy to a cloud-based cluster.
-6.  **API Documentation:** Add OpenAPI/Swagger documentation for all REST endpoints.
+1.  **Persistent Database:** Replace H2 with PostgreSQL for production-grade data persistence
+2.  **Security:** Implement JWT-based authentication and authorization at the API Gateway level
+3.  **Observability:** Integrate distributed tracing (Zipkin) and centralized logging (ELK Stack)
+4.  **Resilience:** Add Circuit Breaker pattern using Resilience4j
+5.  **CI/CD Pipeline:** Automate build, test, Docker image creation, and deployment with GitHub Actions
+6.  **Kubernetes Deployment:** Create Kubernetes manifests and deploy to a cloud-based cluster
 
 ---
 
@@ -138,187 +142,88 @@ The project has successfully reached a significant milestone: a fully functional
 -   **Java 21** or higher
 -   **Maven 3.8+**
 -   **Git**
--   **Docker Desktop** (for containerized deployment)
+-   **Docker Desktop**
 
 ---
 
-## 🐳 Option 1: Running with Docker (Recommended)
-
-Docker provides a consistent, isolated environment for all services.
+## 🐳 Running with Docker Compose (Recommended)
 
 ### Quick Start
 
 ```bash
-# 1. Ensure Docker is running
-docker --version
+# 1. Clone the ecosystem repository
+git clone https://github.com/DanLearnings/ecommerce-ecosystem.git
+cd ecommerce-ecosystem
 
-# 2. Create Docker network
-docker network create ecommerce-network
+# 2. Clone all microservice repositories (in parent directory)
+cd ..
+git clone https://github.com/DanLearnings/ecommerce-service-registry.git
+git clone https://github.com/DanLearnings/ecommerce-config-server.git
+git clone https://github.com/DanLearnings/ecommerce-api-gateway.git
+git clone https://github.com/DanLearnings/ecommerce-inventory-service.git
+git clone https://github.com/DanLearnings/ecommerce-notification-service.git
 
-# 3. Start Service Registry
-docker run -d \
-  --name service-registry \
-  --network ecommerce-network \
-  -p 8761:8761 \
-  ecommerce-service-registry:latest
+# 3. Return to ecosystem directory
+cd ecommerce-ecosystem
 
-# 4. Start Config Server (wait 30 seconds after Service Registry)
-docker run -d \
-  --name config-server \
-  --network ecommerce-network \
-  -p 8888:8888 \
-  ecommerce-config-server:latest
+# 4. Start all services with Docker Compose
+docker-compose up -d
 
-# 5. Start API Gateway (wait 30 seconds after Config Server)
-docker run -d \
-  --name api-gateway \
-  --network ecommerce-network \
-  -p 8080:8080 \
-  ecommerce-api-gateway:latest
+# 5. View logs
+docker-compose logs -f
 
-# 6. Start Inventory Service (wait 30 seconds after API Gateway)
-docker run -d \
-  --name inventory-service \
-  --network ecommerce-network \
-  -p 8081:8081 \
-  ecommerce-inventory-service:latest
+# 6. Check service status
+docker-compose ps
 ```
 
-### Building Docker Images
+### Expected Output
 
-If you need to build the images locally:
-
-```bash
-# Service Registry
-cd ecommerce-service-registry
-docker build -t ecommerce-service-registry:latest .
-
-# Config Server
-cd ecommerce-config-server
-docker build -t ecommerce-config-server:latest .
-
-# API Gateway
-cd ecommerce-api-gateway
-docker build -t ecommerce-api-gateway:latest .
-
-# Inventory Service
-cd ecommerce-inventory-service
-docker build -t ecommerce-inventory-service:latest .
+```
+NAME                     STATUS          PORTS
+rabbitmq                Up (healthy)    5672, 15672
+service-registry        Up (healthy)    8761
+config-server           Up (healthy)    8888
+api-gateway             Up (healthy)    8080
+inventory-service       Up (healthy)    8081
+notification-service    Up (healthy)    8083
 ```
 
 ### Verification
 
 ```bash
-# Check all containers are running
-docker ps
-
-# Check Eureka Dashboard
+# Eureka Dashboard
 open http://localhost:8761
 
-# Test API Gateway health
+# RabbitMQ Management UI (admin/admin)
+open http://localhost:15672
+
+# API Gateway Health
 curl http://localhost:8080/actuator/health
 
 # Test Inventory Service via Gateway
 curl http://localhost:8080/inventory-service/products
-```
 
-### Viewing Logs
-
-```bash
-# View logs for a specific service
-docker logs -f service-registry
-docker logs -f config-server
-docker logs -f api-gateway
-docker logs -f inventory-service
+# Test Notification Service
+curl -X POST http://localhost:8083/notifications/test \
+  -H "Content-Type: application/json" \
+  -d '{"recipient":"your-email@gmail.com","name":"Test User"}'
 ```
 
 ### Stopping Services
 
 ```bash
 # Stop all services
-docker stop service-registry config-server api-gateway inventory-service
+docker-compose down
 
-# Remove containers
-docker rm service-registry config-server api-gateway inventory-service
-
-# Remove network
-docker network rm ecommerce-network
+# Stop and remove volumes
+docker-compose down -v
 ```
 
 ---
 
-## 💻 Option 2: Running with Maven (Development)
+## 🧪 Testing the Complete Flow
 
-For active development, you may prefer running services directly with Maven.
-
-### Startup Order (Important!)
-
-Services must be started in this specific order:
-
-1.  **Service Registry** (port 8761)
-2.  **Config Server** (port 8888)
-3.  **API Gateway** (port 8080)
-4.  **Inventory Service** (port 8081)
-
-### Step-by-Step Instructions
-
-#### 1. Clone All Repositories
-
-```bash
-git clone https://github.com/DanLearnings/ecommerce-service-registry.git
-git clone https://github.com/DanLearnings/ecommerce-config-server.git
-git clone https://github.com/DanLearnings/ecommerce-api-gateway.git
-git clone https://github.com/DanLearnings/ecommerce-inventory-service.git
-```
-
-#### 2. Start Service Registry
-
-```bash
-cd ecommerce-service-registry
-mvn spring-boot:run
-```
-
-**Validation:** Open http://localhost:8761 - You should see the Eureka dashboard.
-
-#### 3. Start Config Server
-
-```bash
-cd ecommerce-config-server
-mvn spring-boot:run
-```
-
-**Validation:** 
-- Check http://localhost:8761 - CONFIG-SERVER should appear as registered
-- Test config endpoint: http://localhost:8888/inventory-service/default
-
-#### 4. Start API Gateway
-
-```bash
-cd ecommerce-api-gateway
-mvn spring-boot:run
-```
-
-**Validation:**
-- Check http://localhost:8761 - API-GATEWAY should appear as registered
-- Test health: http://localhost:8080/actuator/health
-
-#### 5. Start Inventory Service
-
-```bash
-cd ecommerce-inventory-service
-mvn spring-boot:run
-```
-
-**Validation:**
-- Check http://localhost:8761 - INVENTORY-SERVICE should appear as registered
-- Test direct access: http://localhost:8081/products (should return `[]`)
-- Test via gateway: http://localhost:8080/inventory-service/products (should return `[]`)
-
----
-
-## 🧪 Testing the API
-
-### Create a Product (via API Gateway)
+### 1. Create a Product
 
 ```bash
 curl -X POST http://localhost:8080/inventory-service/products \
@@ -332,103 +237,68 @@ curl -X POST http://localhost:8080/inventory-service/products \
   }'
 ```
 
-### List All Products (via API Gateway)
+### 2. List All Products
 
 ```bash
 curl http://localhost:8080/inventory-service/products
 ```
 
-### Get Product by ID
+### 3. Send Notification via RabbitMQ
 
-```bash
-curl http://localhost:8080/inventory-service/products/1
+**Via RabbitMQ UI (http://localhost:15672):**
+1. Go to **Queues** → `notification-queue`
+2. Click **Publish message**
+3. Paste this JSON in **Payload**:
+
+```json
+{
+  "eventType": "TEST_NOTIFICATION",
+  "recipient": "your-email@gmail.com",
+  "subject": "Test Email from E-commerce System",
+  "body": "This email was sent through the event-driven architecture using RabbitMQ!",
+  "relatedEntityType": "TEST",
+  "relatedEntityId": "test-001"
+}
 ```
 
-### Update Product
-
-```bash
-curl -X PUT http://localhost:8080/inventory-service/products/1 \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Notebook Dell Inspiron Updated",
-    "description": "Updated laptop description",
-    "price": 3800.00,
-    "quantity": 8,
-    "sku": "DELL-NB-001"
-  }'
-```
-
-### Delete Product
-
-```bash
-curl -X DELETE http://localhost:8080/inventory-service/products/1
-```
+4. Click **Publish message**
+5. **You should receive an email!** 📧
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Service fails to start with "Port already in use"
-
-**Solution:** Check if another service is running on the same port and stop it.
-
-```bash
-# Windows
-netstat -ano | findstr :8080
-taskkill /PID <PID> /F
-
-# Linux/Mac
-lsof -i :8080
-kill -9 <PID>
-```
-
-### Docker: Service fails to register with Eureka
+### Docker: Service fails to start
 
 **Solution:**
-1. Ensure Service Registry container is running and healthy
-2. Verify all containers are on the same Docker network: `docker network inspect ecommerce-network`
-3. Check container logs: `docker logs <container-name>`
-4. Ensure environment variable `EUREKA_CLIENT_SERVICEURL_DEFAULTZONE` uses the container name: `http://service-registry:8761/eureka/`
+1. Check Docker Desktop is running
+2. View container logs: `docker-compose logs <service-name>`
+3. Verify all containers are healthy: `docker-compose ps`
+4. Restart specific service: `docker-compose restart <service-name>`
 
-### Docker: Config Server cannot clone Git repository
-
-**Solution:**
-1. Verify the Git repository URL is correct
-2. Ensure the repository is public or authentication is configured
-3. Check Config Server logs: `docker logs config-server`
-4. Verify Git is installed in the container (should be included in the Dockerfile)
-
-### Docker: Services cannot communicate
+### RabbitMQ: Cannot connect
 
 **Solution:**
-1. Verify all containers are on the same network: `docker network inspect ecommerce-network`
-2. Test connectivity: `docker exec api-gateway ping service-registry`
-3. Ensure service names match container names in environment variables
-4. Check firewall settings on your host machine
+1. Ensure RabbitMQ container is healthy: `docker ps`
+2. Check RabbitMQ logs: `docker-compose logs rabbitmq`
+3. Verify port 5672 is not in use by another application
+4. Access management UI: http://localhost:15672 (admin/admin)
 
-### API Gateway returns 404 for service requests
-
-**Solution:**
-1. Verify the service is registered in Eureka (check http://localhost:8761)
-2. Ensure you're using the correct URL pattern: `http://localhost:8080/{service-name}/{endpoint}`
-3. Check that Gateway is using WebFlux, not MVC
-4. Verify the `spring.cloud.gateway.server.webflux.discovery.locator.enabled: true` configuration
-5. Wait 30-60 seconds after service startup for registration to complete
-
-### Config Server cannot find configurations
+### Notification Service: Emails not sending
 
 **Solution:**
-1. Verify the Git repository URL in `application.yml`
-2. Ensure the repository is public or SSH keys are configured
-3. Check the `search-paths` configuration if using subdirectories
-4. Test manually: http://localhost:8888/{service-name}/default
+1. Verify Gmail SMTP credentials in `notification-service.yml` in the config repo
+2. Ensure "App Password" is correctly configured (not regular Gmail password)
+3. Check Notification Service logs: `docker-compose logs notification-service`
+4. Test direct endpoint: `POST http://localhost:8083/notifications/test`
 
-### "Cannot resolve symbol" in IntelliJ IDEA
+### Services not appearing in Eureka
 
 **Solution:**
-1. Maven → Reload All Maven Projects
-2. File → Invalidate Caches / Restart
-3. Rebuild Project
+1. Wait 30-60 seconds after service startup for registration
+2. Check service logs for Eureka registration errors
+3. Verify `eureka.client.service-url.defaultZone` points to `http://service-registry:8761/eureka/`
+4. Ensure all containers are on the same Docker network
 
 ---
 
@@ -438,6 +308,8 @@ kill -9 <PID>
 -   [Spring Cloud Gateway Documentation](https://spring.io/projects/spring-cloud-gateway)
 -   [Netflix Eureka Wiki](https://github.com/Netflix/eureka/wiki)
 -   [Spring Cloud Config Documentation](https://cloud.spring.io/spring-cloud-config/)
+-   [RabbitMQ Tutorials](https://www.rabbitmq.com/getstarted.html)
+-   [Spring AMQP Documentation](https://spring.io/projects/spring-amqp)
 -   [Docker Documentation](https://docs.docker.com/)
 -   [Docker Compose Documentation](https://docs.docker.com/compose/)
 
@@ -457,10 +329,10 @@ This project is for educational purposes.
 
 ## 👨‍💻 Author
 
-**Dan Learnings**
+**Danrley Brasil**
 - GitHub: [@DanrleyBrasil](https://github.com/DanrleyBrasil)
 - Organization: [DanLearnings](https://github.com/DanLearnings)
 
 ---
 
-**Last Updated:** October 29, 2025
+**Last Updated:** November 2025
